@@ -18,7 +18,13 @@ export const updateStatus = mutation({
     const task = await ctx.db.get(args.taskId);
     if (!task) throw new Error("Task not found");
 
-    await ctx.db.patch(args.taskId, { status: args.status });
+    const patch: Record<string, unknown> = { status: args.status };
+    if (args.status === "done") {
+      patch.doneAt = Date.now();
+    } else if (task.status === "done") {
+      patch.doneAt = undefined;
+    }
+    await ctx.db.patch(args.taskId, patch);
 
     await ctx.db.insert("activities", {
       type: "status_update",
@@ -88,6 +94,15 @@ export const archiveTask = mutation({
       message: `archived "${task.title}"`,
       targetId: args.taskId,
     });
+  },
+});
+
+export const togglePin = mutation({
+  args: { taskId: v.id("tasks") },
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task) throw new Error("Task not found");
+    await ctx.db.patch(args.taskId, { pinned: !task.pinned });
   },
 });
 

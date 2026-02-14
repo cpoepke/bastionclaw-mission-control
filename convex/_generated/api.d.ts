@@ -10,6 +10,7 @@
 
 import type * as agents from "../agents.js";
 import type * as auth from "../auth.js";
+import type * as crons from "../crons.js";
 import type * as documents from "../documents.js";
 import type * as fix_loki from "../fix_loki.js";
 import type * as http from "../http.js";
@@ -17,6 +18,7 @@ import type * as messages from "../messages.js";
 import type * as nanoclaw from "../nanoclaw.js";
 import type * as queries from "../queries.js";
 import type * as seed from "../seed.js";
+import type * as settings from "../settings.js";
 import type * as tasks from "../tasks.js";
 
 import type {
@@ -28,6 +30,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   agents: typeof agents;
   auth: typeof auth;
+  crons: typeof crons;
   documents: typeof documents;
   fix_loki: typeof fix_loki;
   http: typeof http;
@@ -35,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   nanoclaw: typeof nanoclaw;
   queries: typeof queries;
   seed: typeof seed;
+  settings: typeof settings;
   tasks: typeof tasks;
 }>;
 

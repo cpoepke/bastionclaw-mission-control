@@ -2,7 +2,7 @@ import React from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Id } from "../../convex/_generated/dataModel";
-import { IconArchive, IconPlayerPlay, IconLoader2 } from "@tabler/icons-react";
+import { IconArchive, IconPlayerPlay, IconLoader2, IconPin, IconPinnedFilled } from "@tabler/icons-react";
 
 interface Task {
 	_id: Id<"tasks">;
@@ -13,6 +13,7 @@ interface Task {
 	tags: string[];
 	borderColor?: string;
 	lastMessageTime?: number;
+	pinned?: boolean;
 }
 
 interface TaskCardProps {
@@ -25,6 +26,7 @@ interface TaskCardProps {
 	currentUserAgentId?: Id<"agents">;
 	onArchive?: (taskId: Id<"tasks">) => void;
 	onPlay?: (taskId: Id<"tasks">) => void;
+	onTogglePin?: (taskId: Id<"tasks">) => void;
 	isOverlay?: boolean;
 }
 
@@ -38,6 +40,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 	currentUserAgentId,
 	onArchive,
 	onPlay,
+	onTogglePin,
 	isOverlay = false,
 }) => {
 	const {
@@ -99,6 +102,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
 						<span className="p-1 text-[var(--accent-blue)]" title="Running">
 							<IconLoader2 size={14} className="animate-spin" />
 						</span>
+					)}
+					{columnId === "done" && onTogglePin && (
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								onTogglePin(task._id);
+							}}
+							className={`p-1 hover:bg-muted rounded transition-colors ${
+								task.pinned ? "text-[var(--accent-orange)]" : "text-muted-foreground hover:text-foreground"
+							}`}
+							title={task.pinned ? "Unpin task" : "Pin task (prevent auto-archive)"}
+						>
+							{task.pinned ? <IconPinnedFilled size={14} /> : <IconPin size={14} />}
+						</button>
 					)}
 					{columnId === "done" && currentUserAgentId && onArchive && (
 						<button

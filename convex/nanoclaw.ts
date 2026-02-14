@@ -210,7 +210,9 @@ export const receiveAgentEvent = mutation({
 			}
 
 			const endStatus = needsFeedback || isCodingTask ? "review" : "done";
-			await ctx.db.patch(task._id, { status: endStatus });
+			const endPatch: Record<string, unknown> = { status: endStatus };
+			if (endStatus === "done") endPatch.doneAt = Date.now();
+			await ctx.db.patch(task._id, endPatch);
 
 			// Calculate duration
 			const startTime = task.startedAt || task._creationTime;

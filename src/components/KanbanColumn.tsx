@@ -12,12 +12,14 @@ interface KanbanColumnProps {
 	taskCount: number;
 	children: React.ReactNode;
 	isOver?: boolean;
+	headerExtra?: React.ReactNode;
 }
 
 const KanbanColumn: React.FC<KanbanColumnProps> = ({
 	column,
 	taskCount,
 	children,
+	headerExtra,
 }) => {
 	const { isOver, setNodeRef } = useDroppable({
 		id: column.id,
@@ -38,6 +40,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
 				<span className="text-[10px] font-bold text-muted-foreground flex-1 uppercase tracking-tighter">
 					{column.label}
 				</span>
+				{headerExtra}
 				<span className="text-[10px] text-muted-foreground bg-border px-1.5 py-0.25 rounded-full">
 					{taskCount}
 				</span>

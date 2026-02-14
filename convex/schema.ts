@@ -39,6 +39,8 @@ export default defineSchema({
 		startedAt: v.optional(v.number()),
 		usedCodingTools: v.optional(v.boolean()),
 		source: v.optional(v.string()),
+		doneAt: v.optional(v.number()),
+		pinned: v.optional(v.boolean()),
 	}),
 	messages: defineTable({
 		taskId: v.id("tasks"),
@@ -60,6 +62,10 @@ export default defineSchema({
 		taskId: v.optional(v.id("tasks")),
 		createdByAgentId: v.optional(v.id("agents")),
 		messageId: v.optional(v.id("messages")),
+	}),
+	settings: defineTable({
+		key: v.string(),
+		value: v.boolean(),
 	}),
 	notifications: defineTable({
 		mentionedAgentId: v.id("agents"),

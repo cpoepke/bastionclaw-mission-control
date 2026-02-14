@@ -532,6 +532,32 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
     return;
   }
 
+  // --- Piped messages to active container → create task for non-MC piped messages ---
+  if (message === "Piped messages to active container") {
+    const chatJid = kv["chatJid"];
+    const prompt = kv["prompt"];
+    if (!chatJid) return;
+
+    const source = detectSource(chatJid);
+    if (!source || source === "mission-control") return;
+
+    const pipedRunId = `piped-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+    void postEvent({
+      runId: pipedRunId,
+      action: "start",
+      sessionKey: `nanoclaw:piped-${chatJid}`,
+      agentId: getGroupName("main"),
+      timestamp: new Date().toISOString(),
+      source,
+      prompt: prompt ?? null,
+      eventType: "lifecycle:start",
+    });
+
+    console.log(`[watcher] PIPED_START ${pipedRunId} chatJid=${chatJid} source=${source}`);
+    return;
+  }
+
   // --- Spawning container agent → start event ---
   if (message === "Spawning container agent") {
     const group = kv["group"];

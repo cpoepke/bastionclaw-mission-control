@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { IconArchive } from "@tabler/icons-react";
+import { IconArchive, IconClock } from "@tabler/icons-react";
 import {
 	DndContext,
 	DragOverlay,
@@ -26,6 +26,7 @@ interface Task {
 	tags: string[];
 	borderColor?: string;
 	lastMessageTime?: number;
+	pinned?: boolean;
 }
 
 function formatRelativeTime(timestamp: number | null): string {
@@ -67,6 +68,10 @@ const MissionQueue: React.FC<MissionQueueProps> = ({ selectedTaskId, onSelectTas
 	const agents = useQuery(api.queries.listAgents);
 	const archiveTask = useMutation(api.tasks.archiveTask);
 	const updateStatus = useMutation(api.tasks.updateStatus);
+	const autoArchiveSetting = useQuery(api.settings.get, { key: "autoArchive24h" });
+	const setSetting = useMutation(api.settings.set);
+	const togglePin = useMutation(api.tasks.togglePin);
+	const autoArchiveEnabled = autoArchiveSetting === null ? true : autoArchiveSetting;
 	const [showArchived, setShowArchived] = useState(false);
 	const convex = useConvex();
 	const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -133,6 +138,10 @@ const MissionQueue: React.FC<MissionQueueProps> = ({ selectedTaskId, onSelectTas
 		if (currentUserAgent) {
 			archiveTask({ taskId, agentId: currentUserAgent._id });
 		}
+	};
+
+	const handleTogglePin = (taskId: Id<"tasks">) => {
+		togglePin({ taskId });
 	};
 
 	const buildAgentPreamble = (task: Task) => {
@@ -246,9 +255,24 @@ const MissionQueue: React.FC<MissionQueueProps> = ({ selectedTaskId, onSelectTas
 							key={col.id}
 							column={col}
 							taskCount={tasks.filter((t) => t.status === col.id).length}
+							headerExtra={col.id === "done" ? (
+								<button
+									onClick={() => setSetting({ key: "autoArchive24h", value: !autoArchiveEnabled })}
+									className={`flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded transition-colors ${
+										autoArchiveEnabled
+											? "bg-green-100 text-green-700"
+											: "bg-gray-100 text-gray-400"
+									}`}
+									title={autoArchiveEnabled ? "Auto-archive after 24h is ON" : "Auto-archive after 24h is OFF"}
+								>
+									<IconClock size={10} />
+									Auto-Archive (24h)
+								</button>
+							) : undefined}
 						>
 							{tasks
 								.filter((t) => t.status === col.id)
+								.sort((a, b) => col.id === "done" ? (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) : 0)
 								.map((task) => (
 									<TaskCard
 										key={task._id}
@@ -261,6 +285,7 @@ const MissionQueue: React.FC<MissionQueueProps> = ({ selectedTaskId, onSelectTas
 										currentUserAgentId={currentUserAgent?._id}
 										onArchive={handleArchive}
 										onPlay={handlePlay}
+										onTogglePin={handleTogglePin}
 									/>
 								))}
 						</KanbanColumn>
