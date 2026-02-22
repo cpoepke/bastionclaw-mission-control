@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * NanoClaw Watcher Daemon
+ * BastionClaw Watcher Daemon
  *
- * Standalone process that tails NanoClaw's Pino logs, translating container
+ * Standalone process that tails BastionClaw's Pino logs, translating container
  * lifecycle events into webhook payloads for Mission Control's Convex backend.
  *
  * No SQLite dependency — group info is read from available_groups.json and
@@ -10,11 +10,11 @@
  * by the Vite IPC bridge.
  *
  * Usage:
- *   npx tsx hooks/nanoclaw/watcher.ts
+ *   npx tsx hooks/bastionclaw/watcher.ts
  *
  * Environment:
  *   MISSION_CONTROL_URL  – Convex HTTP endpoint (required)
- *   NANOCLAW_DIR         – NanoClaw root dir (default: ~/nanoclaw)
+ *   BASTIONCLAW_DIR         – BastionClaw root dir (default: ~/bastionclaw)
  */
 
 import fs from "node:fs";
@@ -27,12 +27,12 @@ import { execSync } from "node:child_process";
 // ---------------------------------------------------------------------------
 
 const MISSION_CONTROL_URL =
-  process.env.MISSION_CONTROL_URL || "http://127.0.0.1:3211/nanoclaw/event";
-const NANOCLAW_DIR = process.env.NANOCLAW_DIR || path.join(os.homedir(), "nanoclaw");
-const LOG_FILE = path.join(NANOCLAW_DIR, "logs", "nanoclaw.log");
-const GROUPS_FILE = path.join(NANOCLAW_DIR, "data", "ipc", "main", "available_groups.json");
-const MC_MAPPINGS_DIR = path.join(NANOCLAW_DIR, "data", "ipc", "main", ".mc-mappings");
-const IPC_MESSAGES_DIR = path.join(NANOCLAW_DIR, "data", "ipc", "main", "messages");
+  process.env.MISSION_CONTROL_URL || "http://127.0.0.1:3211/bastionclaw/event";
+const BASTIONCLAW_DIR = process.env.BASTIONCLAW_DIR || path.join(os.homedir(), "bastionclaw");
+const LOG_FILE = path.join(BASTIONCLAW_DIR, "logs", "bastionclaw.log");
+const GROUPS_FILE = path.join(BASTIONCLAW_DIR, "data", "ipc", "main", "available_groups.json");
+const MC_MAPPINGS_DIR = path.join(BASTIONCLAW_DIR, "data", "ipc", "main", ".mc-mappings");
+const IPC_MESSAGES_DIR = path.join(BASTIONCLAW_DIR, "data", "ipc", "main", "messages");
 const POLL_INTERVAL_MS = 2000;
 
 // ---------------------------------------------------------------------------
@@ -153,26 +153,26 @@ function getGroupName(folder: string): string {
   // "main" folder maps to the first registered group
   if (folder === "main") {
     const groups = getGroups();
-    return groups[0]?.name ?? "NanoClaw";
+    return groups[0]?.name ?? "BastionClaw";
   }
   return folder;
 }
 
 // ---------------------------------------------------------------------------
-// MC session key extraction (from NanoClaw's SQLite prompt field)
+// MC session key extraction (from BastionClaw's SQLite prompt field)
 // ---------------------------------------------------------------------------
 
-const NANOCLAW_DB = path.join(NANOCLAW_DIR, "store", "messages.db");
+const BASTIONCLAW_DB = path.join(BASTIONCLAW_DIR, "store", "messages.db");
 
 /**
- * Extract the MC session key from a NanoClaw task's prompt.
+ * Extract the MC session key from a BastionClaw task's prompt.
  * The Vite IPC bridge embeds [mc:session=mission:<id>] at the start.
  * Reads directly from SQLite via the sqlite3 CLI — no npm dependency.
  */
 function findMcSession(nanoTaskId: string): string | null {
   try {
     const result = execSync(
-      `sqlite3 "${NANOCLAW_DB}" "SELECT prompt FROM scheduled_tasks WHERE id='${nanoTaskId}' LIMIT 1;"`,
+      `sqlite3 "${BASTIONCLAW_DB}" "SELECT prompt FROM scheduled_tasks WHERE id='${nanoTaskId}' LIMIT 1;"`,
       { encoding: "utf-8", timeout: 2000 },
     ).trim();
     const match = result.match(/\[mc:session=(mission:[^\]]+)\]/);
@@ -188,12 +188,12 @@ function findMcSession(nanoTaskId: string): string | null {
 
 /**
  * Read the agent's full response from task_run_logs (written after container exits).
- * Strips <internal>...</internal> blocks to match NanoClaw's display behavior.
+ * Strips <internal>...</internal> blocks to match BastionClaw's display behavior.
  */
 function readTaskResult(nanoTaskId: string): string | null {
   try {
     const result = execSync(
-      `sqlite3 "${NANOCLAW_DB}" "SELECT result FROM task_run_logs WHERE task_id='${nanoTaskId}' AND status='success' ORDER BY run_at DESC LIMIT 1;"`,
+      `sqlite3 "${BASTIONCLAW_DB}" "SELECT result FROM task_run_logs WHERE task_id='${nanoTaskId}' AND status='success' ORDER BY run_at DESC LIMIT 1;"`,
       { encoding: "utf-8", timeout: 2000 },
     ).trim();
     return result
@@ -233,7 +233,7 @@ function walkDir(dir: string, base: string, out: Map<string, number>): void {
 }
 
 function snapshotGroupDir(group: string): Map<string, number> {
-  const groupDir = path.join(NANOCLAW_DIR, "groups", group);
+  const groupDir = path.join(BASTIONCLAW_DIR, "groups", group);
   const snapshot = new Map<string, number>();
   if (fs.existsSync(groupDir)) {
     walkDir(groupDir, groupDir, snapshot);
@@ -247,7 +247,7 @@ interface FileDiff {
 }
 
 function diffGroupDir(group: string, before: Map<string, number>): FileDiff[] {
-  const groupDir = path.join(NANOCLAW_DIR, "groups", group);
+  const groupDir = path.join(BASTIONCLAW_DIR, "groups", group);
   const current = new Map<string, number>();
   if (fs.existsSync(groupDir)) {
     walkDir(groupDir, groupDir, current);
@@ -393,7 +393,7 @@ function finalizeGroupEnd(group: string): void {
     }
 
     // Non-MC run (telegram, whatsapp, webui) — finalize directly
-    if (run.sessionKey.startsWith("nanoclaw:")) {
+    if (run.sessionKey.startsWith("bastionclaw:")) {
       run.completedEarly = true;
 
       if (!capturedResponseByGroup.has(group) && run.response) {
@@ -467,7 +467,7 @@ function finalizeGroupEnd(group: string): void {
   // Last resort: check SQLite for active MC tasks
   try {
     const result = execSync(
-      `sqlite3 "${NANOCLAW_DB}" "SELECT id, prompt FROM scheduled_tasks WHERE status='active' ORDER BY created_at DESC LIMIT 1;"`,
+      `sqlite3 "${BASTIONCLAW_DB}" "SELECT id, prompt FROM scheduled_tasks WHERE status='active' ORDER BY created_at DESC LIMIT 1;"`,
       { encoding: "utf-8", timeout: 2000 },
     ).trim();
     if (result) {
@@ -546,7 +546,7 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
     void postEvent({
       runId: pipedRunId,
       action: "start",
-      sessionKey: `nanoclaw:piped-${chatJid}`,
+      sessionKey: `bastionclaw:piped-${chatJid}`,
       agentId: getGroupName("main"),
       timestamp: new Date().toISOString(),
       source,
@@ -578,7 +578,7 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
     const mcSession = peekMcSession(group);
     const chatJid = kv["chatJid"];
     let source: string | null = chatJid ? detectSource(chatJid) : null;
-    const sessionKey = mcSession ?? `nanoclaw:${group}`;
+    const sessionKey = mcSession ?? `bastionclaw:${group}`;
 
     if (mcSession) {
       source = "mission-control";
@@ -639,7 +639,7 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
   }
 
   // --- IPC/Telegram message sent → mark group as having active query ---
-  // NanoClaw emits these after agent output is delivered via send_message MCP
+  // BastionClaw emits these after agent output is delivered via send_message MCP
   // tool. We track the group so watchIpcMessages captures the response text.
   // The actual end signal is "Agent query completed" (below).
   if (message === "IPC message sent" || message === "Telegram message sent") {
@@ -675,7 +675,7 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
   }
 
   // --- Agent query completed → definitive end signal ---
-  // NanoClaw logs this when the agent-runner finishes a query (null-result
+  // BastionClaw logs this when the agent-runner finishes a query (null-result
   // OUTPUT_MARKER). This is the real "turn done" signal — finalize immediately.
   if (message === "Agent query completed") {
     const group = kv["group"];
@@ -746,7 +746,7 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
     if (!run) return;
 
     // Skip if already completed early — code 137 (SIGKILL) is expected
-    // when NanoClaw kills the idle container after the output was delivered
+    // when BastionClaw kills the idle container after the output was delivered
     if (run.completedEarly) {
       console.log(`[watcher] ERROR (skip, already sent early) ${containerName} code=${code}`);
       activeRuns.delete(containerName);
@@ -856,14 +856,14 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
       runId,
       group: groupFolder,
       startTime: Date.now(),
-      sessionKey: `nanoclaw:task:${taskId}`,
+      sessionKey: `bastionclaw:task:${taskId}`,
     };
     activeTaskRuns.set(taskId, run);
 
     void postEvent({
       runId,
       action: "start",
-      sessionKey: `nanoclaw:task:${taskId}`,
+      sessionKey: `bastionclaw:task:${taskId}`,
       agentId: getGroupName(groupFolder),
       timestamp: new Date().toISOString(),
       source: "scheduled",
@@ -1115,7 +1115,7 @@ const seenIpcMessages = new Set<string>();
 
 /**
  * Watch the IPC messages/ directory for outgoing messages written by the
- * container's send_message MCP tool. NanoClaw's IPC watcher also reads these
+ * container's send_message MCP tool. BastionClaw's IPC watcher also reads these
  * files (every 1s) and forwards them to Telegram, then deletes them.
  *
  * We poll at 200ms to read the file content before the IPC watcher deletes it.
@@ -1336,13 +1336,13 @@ function watchMcMappings(): void {
 // Main
 // ---------------------------------------------------------------------------
 
-console.log("[watcher] NanoClaw Watcher starting");
+console.log("[watcher] BastionClaw Watcher starting");
 console.log(`[watcher] URL: ${MISSION_CONTROL_URL}`);
-console.log(`[watcher] Dir: ${NANOCLAW_DIR}`);
+console.log(`[watcher] Dir: ${BASTIONCLAW_DIR}`);
 console.log(`[watcher] Log: ${LOG_FILE}`);
 
-if (!fs.existsSync(NANOCLAW_DIR)) {
-  console.error(`[watcher] NanoClaw directory not found: ${NANOCLAW_DIR}`);
+if (!fs.existsSync(BASTIONCLAW_DIR)) {
+  console.error(`[watcher] BastionClaw directory not found: ${BASTIONCLAW_DIR}`);
   process.exit(1);
 }
 

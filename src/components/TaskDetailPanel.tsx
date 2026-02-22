@@ -187,7 +187,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ taskId, onClose, onPr
       prompt += `\n\n---\nConversation:\n${thread}\n---\nContinue working on this task based on the conversation above.`;
     }
 
-    // Trigger the agent via NanoClaw IPC
+    // Trigger the agent via BastionClaw IPC
     try {
       const res = await fetch("/hooks/agent", {
         method: "POST",
@@ -200,10 +200,10 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ taskId, onClose, onPr
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        console.error("[TaskDetailPanel] NanoClaw IPC error:", data.error ?? res.status);
+        console.error("[TaskDetailPanel] BastionClaw IPC error:", data.error ?? res.status);
       }
     } catch (err) {
-      console.error("[TaskDetailPanel] Failed to trigger nanoclaw agent:", err);
+      console.error("[TaskDetailPanel] Failed to trigger bastionclaw agent:", err);
     }
   };
 

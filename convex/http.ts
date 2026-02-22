@@ -7,13 +7,13 @@ const http = httpRouter();
 
 auth.addHttpRoutes(http);
 
-// NanoClaw webhook endpoint
+// BastionClaw webhook endpoint
 http.route({
-	path: "/nanoclaw/event",
+	path: "/bastionclaw/event",
 	method: "POST",
 	handler: httpAction(async (ctx, request) => {
 		const body = await request.json();
-		await ctx.runMutation(api.nanoclaw.receiveAgentEvent, body);
+		await ctx.runMutation(api.bastionclaw.receiveAgentEvent, body);
 		return new Response(JSON.stringify({ ok: true }), {
 			status: 200,
 			headers: { "Content-Type": "application/json" },

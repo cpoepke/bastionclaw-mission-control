@@ -7,18 +7,18 @@ import os from "os";
 import { execSync } from "child_process";
 import type { IncomingMessage, ServerResponse } from "http";
 
-const NANOCLAW_DIR = process.env.NANOCLAW_DIR || path.join(os.homedir(), "nanoclaw");
-const IPC_INPUT_DIR = path.join(NANOCLAW_DIR, "data", "ipc", "main", "input");
-const IPC_TASKS_DIR = path.join(NANOCLAW_DIR, "data", "ipc", "main", "tasks");
-const MC_MAPPINGS_DIR = path.join(NANOCLAW_DIR, "data", "ipc", "main", ".mc-mappings");
+const BASTIONCLAW_DIR = process.env.BASTIONCLAW_DIR || path.join(os.homedir(), "bastionclaw");
+const IPC_INPUT_DIR = path.join(BASTIONCLAW_DIR, "data", "ipc", "main", "input");
+const IPC_TASKS_DIR = path.join(BASTIONCLAW_DIR, "data", "ipc", "main", "tasks");
+const MC_MAPPINGS_DIR = path.join(BASTIONCLAW_DIR, "data", "ipc", "main", ".mc-mappings");
 
 /**
- * Read the first registered group JID from NanoClaw's available_groups.json.
+ * Read the first registered group JID from BastionClaw's available_groups.json.
  * Falls back to "main" if unavailable.
  */
 function getTargetJid(): string {
 	try {
-		const groupsFile = path.join(NANOCLAW_DIR, "data", "ipc", "main", "available_groups.json");
+		const groupsFile = path.join(BASTIONCLAW_DIR, "data", "ipc", "main", "available_groups.json");
 		const data = JSON.parse(fs.readFileSync(groupsFile, "utf-8"));
 		const groups = data?.groups;
 		if (Array.isArray(groups) && groups.length > 0 && groups[0].jid) {
@@ -31,13 +31,13 @@ function getTargetJid(): string {
 }
 
 /**
- * Check if a NanoClaw container is currently running for the main group.
+ * Check if a BastionClaw container is currently running for the main group.
  * Uses ps to look for the container runtime process.
  */
 function isContainerRunning(): boolean {
 	try {
 		const result = execSync("ps -eo args", { encoding: "utf-8", timeout: 1000 });
-		return result.includes("nanoclaw-main-");
+		return result.includes("bastionclaw-main-");
 	} catch {
 		return false;
 	}
@@ -45,7 +45,7 @@ function isContainerRunning(): boolean {
 
 /**
  * Write a message directly to the container's IPC input directory.
- * This is the same delivery path NanoClaw uses for Telegram messages —
+ * This is the same delivery path BastionClaw uses for Telegram messages —
  * the container agent-runner polls input/ every 500ms and processes
  * messages immediately, even mid-query.
  *
@@ -79,7 +79,7 @@ function writeMcMapping(sessionKey: string): void {
 }
 
 /**
- * Write a NanoClaw IPC file to trigger a one-shot scheduled task.
+ * Write a BastionClaw IPC file to trigger a one-shot scheduled task.
  * Used as a fallback to spawn a container when none is running.
  * The IPC watcher polls this directory every ~1 second,
  * then the scheduler picks up due tasks every ~60 seconds.
@@ -166,9 +166,9 @@ export default defineConfig({
 			},
 		},
 		{
-			name: "nanoclaw-ipc-bridge",
+			name: "bastionclaw-ipc-bridge",
 			configureServer(server) {
-				// POST /hooks/agent — write NanoClaw IPC file to trigger agent run
+				// POST /hooks/agent — write BastionClaw IPC file to trigger agent run
 				server.middlewares.use("/hooks/agent", async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
 					if (req.method !== "POST") {
 						next();
@@ -191,11 +191,11 @@ export default defineConfig({
 							return;
 						}
 
-						// Check NanoClaw is reachable
-						if (!fs.existsSync(path.join(NANOCLAW_DIR, "data", "ipc"))) {
+						// Check BastionClaw is reachable
+						if (!fs.existsSync(path.join(BASTIONCLAW_DIR, "data", "ipc"))) {
 							res.statusCode = 503;
 							res.setHeader("Content-Type", "application/json");
-							res.end(JSON.stringify({ error: "NanoClaw IPC directory not found" }));
+							res.end(JSON.stringify({ error: "BastionClaw IPC directory not found" }));
 							return;
 						}
 
@@ -213,17 +213,17 @@ export default defineConfig({
 
 						if (containerActive) {
 							const inputId = writeIpcInput(message);
-							console.log(`[nanoclaw-ipc] Wrote input/${inputId} (container active) sessionKey=${sessionKey ?? "none"}`);
+							console.log(`[bastionclaw-ipc] Wrote input/${inputId} (container active) sessionKey=${sessionKey ?? "none"}`);
 						} else {
 							const taskId = writeIpcTask(message, sessionKey);
-							console.log(`[nanoclaw-ipc] Wrote task/${taskId} (no container) sessionKey=${sessionKey ?? "none"}`);
+							console.log(`[bastionclaw-ipc] Wrote task/${taskId} (no container) sessionKey=${sessionKey ?? "none"}`);
 						}
 
 						res.statusCode = 200;
 						res.setHeader("Content-Type", "application/json");
 						res.end(JSON.stringify({ ok: true }));
 					} catch (err) {
-						console.error("[nanoclaw-ipc] Error:", err);
+						console.error("[bastionclaw-ipc] Error:", err);
 						res.statusCode = 500;
 						res.setHeader("Content-Type", "application/json");
 						res.end(JSON.stringify({ error: "Internal error" }));

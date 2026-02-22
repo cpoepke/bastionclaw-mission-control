@@ -188,10 +188,10 @@ const MissionQueue: React.FC<MissionQueueProps> = ({ selectedTaskId, onSelectTas
 
 			if (!res.ok) {
 				const data = await res.json().catch(() => ({}));
-				console.error("[MissionQueue] NanoClaw IPC error:", data.error ?? res.status);
+				console.error("[MissionQueue] BastionClaw IPC error:", data.error ?? res.status);
 			}
 		} catch (err) {
-			console.error("[MissionQueue] Failed to trigger nanoclaw agent:", err);
+			console.error("[MissionQueue] Failed to trigger bastionclaw agent:", err);
 		}
 	};
 

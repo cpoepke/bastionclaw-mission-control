@@ -32,7 +32,7 @@ Each agent can be configured with a custom system prompt, character description,
 - **Comments & Activity**: Comment tracking and a live activity feed with filters for tasks, comments, docs, and status updates.
 - **Secure Access**: Integrated Convex Auth for secure terminal login and management.
 - **Responsive Design**: Premium, centered layout that works seamlessly across all devices.
-- **NanoClaw Integration**: Automatic task tracking for NanoClaw agent runs with real-time lifecycle events.
+- **BastionClaw Integration**: Automatic task tracking for BastionClaw agent runs with real-time lifecycle events.
 
 ## Tech Stack
 
@@ -63,19 +63,19 @@ npx convex run seed:run
 2. Use the **Sign Up** flow to create your commander credentials.
 3. Access the dashboard to start monitoring operations.
 
-## NanoClaw Integration
+## BastionClaw Integration
 
-Mission Control integrates with [NanoClaw](https://github.com/harperaa/nanoclaw-hard-shell) to automatically track agent tasks in real-time.
+Mission Control integrates with [BastionClaw](https://github.com/harperaa/bastionclaw) to automatically track agent tasks in real-time.
 
 ### How It Works
 
 ```
-NanoClaw Process → Pino Logs → Watcher Daemon → HTTP POST → Convex → Real-time UI
+BastionClaw Process → Pino Logs → Watcher Daemon → HTTP POST → Convex → Real-time UI
 ```
 
-A standalone watcher daemon (`hooks/nanoclaw/watcher.ts`) tails NanoClaw's structured logs and polls its SQLite database, translating container lifecycle events into webhook payloads.
+A standalone watcher daemon (`hooks/bastionclaw/watcher.ts`) tails BastionClaw's structured logs and polls its SQLite database, translating container lifecycle events into webhook payloads.
 
-When a NanoClaw agent runs:
+When a BastionClaw agent runs:
 1. **Task Created** - A new task appears in the "In Progress" column with the user's prompt as the title
 2. **Completion** - Task moves to "Done" with the agent's response captured
 3. **Errors** - Task moves to "Review" column with error details
@@ -86,7 +86,7 @@ When a NanoClaw agent runs:
 #### 1. Install the Watcher Daemon
 
 ```bash
-bash hooks/nanoclaw/install.sh
+bash hooks/bastionclaw/install.sh
 ```
 
 This creates a macOS LaunchAgent that automatically starts the watcher on login.
@@ -96,22 +96,22 @@ This creates a macOS LaunchAgent that automatically starts the watcher on login.
 Set the `MISSION_CONTROL_URL` environment variable before running the installer, or edit the LaunchAgent plist after installation:
 
 ```bash
-MISSION_CONTROL_URL="https://your-project.convex.site/nanoclaw/event" bash hooks/nanoclaw/install.sh
+MISSION_CONTROL_URL="https://your-project.convex.site/bastionclaw/event" bash hooks/bastionclaw/install.sh
 ```
 
 For local development (default):
 ```
-http://127.0.0.1:3211/nanoclaw/event
+http://127.0.0.1:3211/bastionclaw/event
 ```
 
 #### 3. Verify
 
 ```bash
 # Check the watcher is running
-launchctl list com.mission-control.nanoclaw-watcher
+launchctl list com.mission-control.bastionclaw-watcher
 
 # View watcher logs
-tail -f ~/Library/Logs/nanoclaw-watcher/stdout.log
+tail -f ~/Library/Logs/bastionclaw-watcher/stdout.log
 ```
 
 ### Features
@@ -122,22 +122,22 @@ tail -f ~/Library/Logs/nanoclaw-watcher/stdout.log
 | **Duration Tracking** | Shows how long each agent run took |
 | **Source Detection** | Messages from Telegram, WhatsApp, etc. show source prefix |
 | **Scheduled Tasks** | Cron/interval task runs tracked with their own lifecycle |
-| **Agent Matching** | NanoClaw groups map to Mission Control agents by name |
+| **Agent Matching** | BastionClaw groups map to Mission Control agents by name |
 
 ### Webhook Endpoint
 
 The integration receives events at:
 
 ```
-POST /nanoclaw/event
+POST /bastionclaw/event
 ```
 
 Payload format:
 ```json
 {
-  "runId": "nanoclaw-main-1707825000",
+  "runId": "bastionclaw-main-1707825000",
   "action": "start | end | error",
-  "sessionKey": "nanoclaw:main",
+  "sessionKey": "bastionclaw:main",
   "agentId": "main",
   "prompt": "user prompt text",
   "source": "telegram",

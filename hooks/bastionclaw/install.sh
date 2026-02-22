@@ -1,27 +1,27 @@
 #!/usr/bin/env bash
-# NanoClaw Watcher — LaunchAgent Installer
-# Usage: bash hooks/nanoclaw/install.sh
+# BastionClaw Watcher — LaunchAgent Installer
+# Usage: bash hooks/bastionclaw/install.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WATCHER_SCRIPT="$SCRIPT_DIR/watcher.ts"
-PLIST_NAME="com.mission-control.nanoclaw-watcher"
+PLIST_NAME="com.mission-control.bastionclaw-watcher"
 PLIST_PATH="$HOME/Library/LaunchAgents/${PLIST_NAME}.plist"
-NANOCLAW_DIR="${NANOCLAW_DIR:-$HOME/nanoclaw}"
-LOG_DIR="$HOME/Library/Logs/nanoclaw-watcher"
+BASTIONCLAW_DIR="${BASTIONCLAW_DIR:-$HOME/bastionclaw}"
+LOG_DIR="$HOME/Library/Logs/bastionclaw-watcher"
 
 # Default URL — override with env var or edit after install
-MISSION_CONTROL_URL="${MISSION_CONTROL_URL:-http://127.0.0.1:3211/nanoclaw/event}"
+MISSION_CONTROL_URL="${MISSION_CONTROL_URL:-http://127.0.0.1:3211/bastionclaw/event}"
 
-echo "Installing NanoClaw watcher daemon..."
+echo "Installing BastionClaw watcher daemon..."
 
-# 1. Validate nanoclaw directory
-if [ ! -d "$NANOCLAW_DIR" ]; then
-  echo "  ERROR: NanoClaw directory not found: $NANOCLAW_DIR"
-  echo "  Set NANOCLAW_DIR env var if NanoClaw is installed elsewhere."
+# 1. Validate bastionclaw directory
+if [ ! -d "$BASTIONCLAW_DIR" ]; then
+  echo "  ERROR: BastionClaw directory not found: $BASTIONCLAW_DIR"
+  echo "  Set BASTIONCLAW_DIR env var if BastionClaw is installed elsewhere."
   exit 1
 fi
-echo "  NanoClaw dir: $NANOCLAW_DIR"
+echo "  BastionClaw dir: $BASTIONCLAW_DIR"
 
 # 2. Check dependencies
 if ! command -v npx &>/dev/null; then
@@ -70,8 +70,8 @@ cat > "$PLIST_PATH" << PLISTEOF
     <dict>
         <key>MISSION_CONTROL_URL</key>
         <string>${MISSION_CONTROL_URL}</string>
-        <key>NANOCLAW_DIR</key>
-        <string>${NANOCLAW_DIR}</string>
+        <key>BASTIONCLAW_DIR</key>
+        <string>${BASTIONCLAW_DIR}</string>
         <key>PATH</key>
         <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
     </dict>

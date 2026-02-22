@@ -59,10 +59,10 @@ export default function App() {
 
 			if (!res.ok) {
 				const data = await res.json().catch(() => ({}));
-				console.error("[App] NanoClaw IPC error:", data.error ?? res.status);
+				console.error("[App] BastionClaw IPC error:", data.error ?? res.status);
 			}
 		} catch (err) {
-			console.error("[App] Failed to trigger nanoclaw agent:", err);
+			console.error("[App] Failed to trigger bastionclaw agent:", err);
 		}
 	}, []);
 

@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 
-const SYSTEM_AGENT_NAME = "NanoClaw";
+const SYSTEM_AGENT_NAME = "BastionClaw";
 // Tools that reliably indicate coding work (write excluded — it's used for markdown/docs too)
 const CODING_TOOLS = ["edit", "bash", "run", "process"];
 
@@ -119,7 +119,7 @@ export const receiveAgentEvent = mutation({
 					title = `[${channelLabel}] ${title}`;
 				}
 
-				const tags = ["nanoclaw"];
+				const tags = ["bastionclaw"];
 				if (source) tags.push(source);
 
 				const borderColor = source ? SOURCE_BORDER_COLORS[source] : undefined;
