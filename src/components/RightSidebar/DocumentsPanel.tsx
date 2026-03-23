@@ -64,7 +64,7 @@ const DocumentsPanel: React.FC<DocumentsPanelProps> = ({
 			query.then(({ data }) =>
 				setAllDocuments(
 					(data ?? []).map((d: Record<string, unknown>) => ({
-						...(d as Document),
+						...(d as unknown as Document),
 						agent_name: (d.mc_agents as { name?: string } | null)?.name,
 					})),
 				),

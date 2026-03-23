@@ -97,7 +97,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 				.select("*, mc_agents!created_by_agent_id(name)")
 				.eq("task_id", taskId)
 				.then(({ data }) => setResources((data ?? []).map((d: Record<string, unknown>) => ({
-					...(d as Document),
+					...(d as unknown as Document),
 					agent_name: (d.mc_agents as { name?: string } | null)?.name,
 				}))));
 		load();
@@ -118,7 +118,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 				.order("created_at", { ascending: false })
 				.limit(50)
 				.then(({ data }) => setActivities((data ?? []).map((a: Record<string, unknown>) => ({
-					...(a as Activity),
+					...(a as unknown as Activity),
 					agent_name: (a.mc_agents as { name?: string } | null)?.name,
 				}))));
 		load();
@@ -138,7 +138,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 				.eq("task_id", taskId)
 				.order("created_at", { ascending: true })
 				.then(({ data }) => setMessages((data ?? []).map((m: Record<string, unknown>) => ({
-					...(m as Message),
+					...(m as unknown as Message),
 					agent_name: (m.mc_agents as { name?: string; avatar?: string } | null)?.name,
 					agent_avatar: (m.mc_agents as { name?: string; avatar?: string } | null)?.avatar,
 				}))));

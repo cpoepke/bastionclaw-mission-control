@@ -38,7 +38,7 @@ const DocumentPreviewTray: React.FC<DocumentPreviewTrayProps> = ({
 			}
 
 			setDocumentContext({
-				...(doc as Document),
+				...(doc as unknown as Document),
 				agent_name: agentName,
 				task_title: taskTitle,
 			});
