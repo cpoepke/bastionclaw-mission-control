@@ -55,7 +55,7 @@ const ConversationTray: React.FC<ConversationTrayProps> = ({
 					.order("created_at", { ascending: true });
 				if (msgs) {
 					conversationMessages = msgs.map((m: Record<string, unknown>) => ({
-						...(m as Message),
+						...(m as unknown as Message),
 						agent_name: (m.mc_agents as { name?: string; avatar?: string } | null)?.name,
 						agent_avatar: (m.mc_agents as { name?: string; avatar?: string } | null)?.avatar,
 					}));
@@ -63,7 +63,7 @@ const ConversationTray: React.FC<ConversationTrayProps> = ({
 			}
 
 			setDocumentContext({
-				...(doc as Document),
+				...(doc as unknown as Document),
 				agent_name: agentName,
 				task_title: taskTitle,
 				task_description: taskDescription,

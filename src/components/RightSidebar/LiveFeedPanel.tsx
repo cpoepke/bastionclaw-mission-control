@@ -55,7 +55,7 @@ const LiveFeedPanel: React.FC = () => {
 			query.then(({ data }) =>
 				setActivities(
 					(data ?? []).map((a: Record<string, unknown>) => ({
-						...(a as Activity),
+						...(a as unknown as Activity),
 						agent_name: (a.mc_agents as { name?: string } | null)?.name,
 					})),
 				),
