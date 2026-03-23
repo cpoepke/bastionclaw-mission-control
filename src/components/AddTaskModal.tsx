@@ -1,7 +1,6 @@
-import React, { useState, useCallback } from "react";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import React, { useState, useCallback, useEffect } from "react";
+import { supabase } from "../lib/supabase";
+import type { Agent } from "../types";
 
 const STATUS_OPTIONS = [
 	{ value: "inbox", label: "Inbox" },
@@ -24,16 +23,18 @@ const COLOR_SWATCHES = [
 
 type AddTaskModalProps = {
 	onClose: () => void;
-	onCreated: (taskId: Id<"tasks">) => void;
-	onTriggerAgent?: (taskId: Id<"tasks">, message: string) => Promise<void>;
+	onCreated: (taskId: string) => void;
+	onTriggerAgent?: (taskId: string, message: string) => Promise<void>;
 	initialAssigneeId?: string;
 };
 
-const AddTaskModal: React.FC<AddTaskModalProps> = ({ onClose, onCreated, onTriggerAgent, initialAssigneeId }) => {
-	const agents = useQuery(api.queries.listAgents);
-	const createTask = useMutation(api.tasks.createTask);
-	const updateAssignees = useMutation(api.tasks.updateAssignees);
-
+const AddTaskModal: React.FC<AddTaskModalProps> = ({
+	onClose,
+	onCreated,
+	onTriggerAgent,
+	initialAssigneeId,
+}) => {
+	const [agents, setAgents] = useState<Agent[]>([]);
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [status, setStatus] = useState(initialAssigneeId ? "assigned" : "inbox");
@@ -42,6 +43,14 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ onClose, onCreated, onTrigg
 	const [assigneeId, setAssigneeId] = useState(initialAssigneeId ?? "");
 	const [borderColor, setBorderColor] = useState("");
 	const [submitting, setSubmitting] = useState(false);
+
+	useEffect(() => {
+		supabase
+			.from("mc_agents")
+			.select("*")
+			.order("created_at", { ascending: true })
+			.then(({ data }) => setAgents(data ?? []));
+	}, []);
 
 	const handleAddTag = useCallback(
 		(e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -68,21 +77,36 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ onClose, onCreated, onTrigg
 			setSubmitting(true);
 
 			try {
-				const taskId = await createTask({
-					title: title.trim(),
-					description: description.trim() || title.trim(),
-					status,
-					tags,
-					borderColor: borderColor || undefined,
-				});
+				const { data: newTask, error } = await supabase
+					.from("mc_tasks")
+					.insert({
+						title: title.trim(),
+						description: description.trim() || title.trim(),
+						status,
+						tags,
+						assignee_ids: assigneeId ? [assigneeId] : [],
+						border_color: borderColor || null,
+						pinned: false,
+					})
+					.select()
+					.single();
 
-				if (assigneeId && agents) {
-					const agent = agents.find((a) => a._id === assigneeId);
+				if (error || !newTask) {
+					console.error("[AddTaskModal] Failed to create task:", error);
+					setSubmitting(false);
+					return;
+				}
+
+				const taskId: string = newTask.id;
+
+				if (assigneeId) {
+					const agent = agents.find((a) => a.id === assigneeId);
 					if (agent) {
-						await updateAssignees({
-							taskId,
-							assigneeIds: [assigneeId as Id<"agents">],
-							agentId: agent._id,
+						await supabase.from("mc_activities").insert({
+							type: "tasks",
+							agent_id: agent.id,
+							message: `was assigned task "${title.trim()}"`,
+							target_id: taskId,
 						});
 					}
 				}
@@ -90,12 +114,11 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ onClose, onCreated, onTrigg
 				if (status === "in_progress" && onTriggerAgent) {
 					let prompt = "";
 
-					// Prepend agent system prompt, character, and lore
-					if (assigneeId && agents) {
-						const agent = agents.find((a) => a._id === assigneeId);
+					if (assigneeId) {
+						const agent = agents.find((a) => a.id === assigneeId);
 						if (agent) {
 							const parts: string[] = [];
-							if (agent.systemPrompt) parts.push(`System Prompt:\n${agent.systemPrompt}`);
+							if (agent.system_prompt) parts.push(`System Prompt:\n${agent.system_prompt}`);
 							if (agent.character) parts.push(`Character:\n${agent.character}`);
 							if (agent.lore) parts.push(`Lore:\n${agent.lore}`);
 							if (parts.length > 0) prompt = parts.join("\n\n") + "\n\n---\n\n";
@@ -111,18 +134,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ onClose, onCreated, onTrigg
 				setSubmitting(false);
 			}
 		},
-		[
-			title,
-			description,
-			status,
-			tags,
-			borderColor,
-			assigneeId,
-			agents,
-			createTask,
-			updateAssignees,
-			onCreated,
-		],
+		[title, description, status, tags, borderColor, assigneeId, agents, onCreated, onTriggerAgent],
 	);
 
 	return (
@@ -244,15 +256,13 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ onClose, onCreated, onTrigg
 							onChange={(e) => {
 								const newId = e.target.value;
 								setAssigneeId(newId);
-								if (newId && status === "inbox") {
-									setStatus("assigned");
-								}
+								if (newId && status === "inbox") setStatus("assigned");
 							}}
 							className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent-blue)] focus:border-transparent"
 						>
 							<option value="">Unassigned</option>
-							{agents?.map((agent) => (
-								<option key={agent._id} value={agent._id}>
+							{agents.map((agent) => (
+								<option key={agent.id} value={agent.id}>
 									{agent.avatar} {agent.name} — {agent.role}
 								</option>
 							))}

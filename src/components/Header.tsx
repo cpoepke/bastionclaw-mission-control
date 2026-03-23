@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import SignOutButton from "./Signout";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
+import { supabase } from "../lib/supabase";
+import type { Agent, Task } from "../types";
 
 type HeaderProps = {
 	onOpenAgents?: () => void;
@@ -10,19 +9,70 @@ type HeaderProps = {
 
 const Header: React.FC<HeaderProps> = ({ onOpenAgents, onOpenLiveFeed }) => {
 	const [time, setTime] = useState(new Date());
-	
-	// Fetch data for dynamic counts
-	const agents = useQuery(api.queries.listAgents);
-	const tasks = useQuery(api.queries.listTasks);
-
-	// Calculate counts
-	const activeAgentsCount = agents ? agents.filter(a => a.status === "active").length : 0;
-	const tasksInQueueCount = tasks ? tasks.filter(t => t.status !== "done").length : 0;
+	const [agents, setAgents] = useState<Agent[] | null>(null);
+	const [tasks, setTasks] = useState<Task[] | null>(null);
 
 	useEffect(() => {
 		const timer = setInterval(() => setTime(new Date()), 1000);
 		return () => clearInterval(timer);
 	}, []);
+
+	useEffect(() => {
+		supabase
+			.from("mc_agents")
+			.select("*")
+			.then(({ data }) => setAgents(data ?? []));
+
+		const channel = supabase
+			.channel("header_agents")
+			.on(
+				"postgres_changes",
+				{ event: "*", schema: "public", table: "mc_agents" },
+				() => {
+					supabase
+						.from("mc_agents")
+						.select("*")
+						.then(({ data }) => setAgents(data ?? []));
+				},
+			)
+			.subscribe();
+
+		return () => {
+			supabase.removeChannel(channel);
+		};
+	}, []);
+
+	useEffect(() => {
+		supabase
+			.from("mc_tasks")
+			.select("*")
+			.then(({ data }) => setTasks(data ?? []));
+
+		const channel = supabase
+			.channel("header_tasks")
+			.on(
+				"postgres_changes",
+				{ event: "*", schema: "public", table: "mc_tasks" },
+				() => {
+					supabase
+						.from("mc_tasks")
+						.select("*")
+						.then(({ data }) => setTasks(data ?? []));
+				},
+			)
+			.subscribe();
+
+		return () => {
+			supabase.removeChannel(channel);
+		};
+	}, []);
+
+	const activeAgentsCount = agents
+		? agents.filter((a) => a.status === "active").length
+		: 0;
+	const tasksInQueueCount = tasks
+		? tasks.filter((t) => t.status !== "done").length
+		: 0;
 
 	const formatTime = (date: Date) => {
 		return date.toLocaleTimeString("en-US", {
@@ -108,7 +158,6 @@ const Header: React.FC<HeaderProps> = ({ onOpenAgents, onOpenLiveFeed }) => {
 					<span className="w-2 h-2 bg-[#0ca678] rounded-full" />
 					ONLINE
 				</div>
-				<SignOutButton />
 			</div>
 		</header>
 	);
