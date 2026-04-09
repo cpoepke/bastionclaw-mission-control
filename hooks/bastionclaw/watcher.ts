@@ -87,22 +87,25 @@ const groupEndCooldown = new Map<string, number>();
 const pendingQueryGroups = new Set<string>();
 
 // Queue helpers for missionSessionQueues
+// Normalize group to lowercase so MC mapping ("main") and container logs ("Main") always match
 function pushMcSession(group: string, sessionKey: string): void {
-  const queue = missionSessionQueues.get(group);
-  if (queue) { queue.push(sessionKey); } else { missionSessionQueues.set(group, [sessionKey]); }
+  const key = group.toLowerCase();
+  const queue = missionSessionQueues.get(key);
+  if (queue) { queue.push(sessionKey); } else { missionSessionQueues.set(key, [sessionKey]); }
 }
 function peekMcSession(group: string): string | undefined {
-  return missionSessionQueues.get(group)?.[0];
+  return missionSessionQueues.get(group.toLowerCase())?.[0];
 }
 function shiftMcSession(group: string): string | undefined {
-  const queue = missionSessionQueues.get(group);
+  const key = group.toLowerCase();
+  const queue = missionSessionQueues.get(key);
   if (!queue || queue.length === 0) return undefined;
   const session = queue.shift()!;
-  if (queue.length === 0) missionSessionQueues.delete(group);
+  if (queue.length === 0) missionSessionQueues.delete(key);
   return session;
 }
 function hasMcSession(group: string): boolean {
-  const queue = missionSessionQueues.get(group);
+  const queue = missionSessionQueues.get(group.toLowerCase());
   return !!queue && queue.length > 0;
 }
 
