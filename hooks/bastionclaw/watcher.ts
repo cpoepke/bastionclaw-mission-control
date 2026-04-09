@@ -714,6 +714,14 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
       return;
     }
 
+    // For MC-linked runs, prefer the mission: session key so the edge function can match the task
+    const endSession = run.sessionKey.startsWith("mission:")
+      ? run.sessionKey
+      : (peekMcSession(run.group) ?? run.sessionKey);
+    if (!run.sessionKey.startsWith("mission:") && endSession.startsWith("mission:")) {
+      shiftMcSession(run.group);
+    }
+
     let response = run.response ?? null;
     if (response && response.length > 1000) {
       response = response.slice(0, 1000) + "...";
@@ -722,14 +730,14 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
     void postEvent({
       runId: run.runId,
       action: "end",
-      sessionKey: run.sessionKey,
+      sessionKey: endSession,
       agentId: getGroupName(run.group),
       timestamp: new Date().toISOString(),
       response,
       eventType: "lifecycle:end",
     });
 
-    console.log(`[watcher] END ${containerName} duration=${duration ?? "?"}ms session=${run.sessionKey}`);
+    console.log(`[watcher] END ${containerName} duration=${duration ?? "?"}ms session=${endSession}`);
     activeRuns.delete(containerName);
     return;
   }
