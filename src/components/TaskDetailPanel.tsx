@@ -151,7 +151,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 	}, [taskId]);
 
 	const task = tasks.find((t) => t.id === taskId);
-	const currentUserAgent = agents.find((a) => a.name === "Allen");
+	const currentUserAgent = agents.find((a) => a.name === "BastionClaw");
 
 	useEffect(() => {
 		if (task) setDescription(task.description);

@@ -151,7 +151,7 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 		);
 	}
 
-	const currentUserAgent = agents.find((a) => a.name === "Allen");
+	const currentUserAgent = agents.find((a) => a.name === "BastionClaw");
 
 	const getAgentName = (id: string) => {
 		return agents.find((a) => a.id === id)?.name || "Unknown";
