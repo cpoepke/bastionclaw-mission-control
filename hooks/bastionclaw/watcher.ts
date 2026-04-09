@@ -544,24 +544,33 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
     const source = detectSource(chatJid);
     if (!source || source === "mission-control") return;
 
-    // Check if this piped message is actually an MC task being delivered to an
-    // idle-but-running container. When Play is clicked while the container is alive,
-    // the MC mapping is written first, then the task prompt is piped via IPC.
-    // Link the active run to the MC session instead of creating a duplicate task.
+    // Check if this piped message belongs to an MC task already being tracked.
+    // Two scenarios:
+    // 1. Container just spawned for an MC task (START already consumed the MC session)
+    //    → the active run already has sessionKey=mission:*, skip the duplicate
+    // 2. Idle container receives a new MC task via IPC (no new container spawned)
+    //    → MC session is still in the queue, link it to the active run
     for (const [group, containerName] of lastContainerByGroup) {
+      const run = activeRuns.get(containerName);
+      if (!run) continue;
+
+      // Scenario 1: START already linked this run to an MC session
+      if (run.sessionKey.startsWith("mission:") && !run.completedEarly) {
+        console.log(`[watcher] PIPED_MC_SKIP ${containerName} session=${run.sessionKey} (already MC-linked)`);
+        return;
+      }
+
+      // Scenario 2: idle container, MC session waiting in queue
       const mcSession = peekMcSession(group);
       if (mcSession) {
-        const run = activeRuns.get(containerName);
-        if (run) {
-          run.sessionKey = mcSession;
-          run.source = "mission-control";
-          run.completedEarly = false;
-          run.prompt = prompt ?? run.prompt;
-          shiftMcSession(group);
-          mcFileSnapshots.set(mcSession, snapshotGroupDir(group));
-          console.log(`[watcher] PIPED_MC ${containerName} session=${mcSession} (linked piped message to MC task)`);
-          return;
-        }
+        run.sessionKey = mcSession;
+        run.source = "mission-control";
+        run.completedEarly = false;
+        run.prompt = prompt ?? run.prompt;
+        shiftMcSession(group);
+        mcFileSnapshots.set(mcSession, snapshotGroupDir(group));
+        console.log(`[watcher] PIPED_MC ${containerName} session=${mcSession} (linked piped message to MC task)`);
+        return;
       }
     }
 
