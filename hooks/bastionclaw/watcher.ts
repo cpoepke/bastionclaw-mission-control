@@ -753,17 +753,25 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
       return;
     }
 
+    // For MC-linked runs, prefer the mission: session key so the edge function can match the task
+    const errorSession = run.sessionKey.startsWith("mission:")
+      ? run.sessionKey
+      : (peekMcSession(run.group) ?? run.sessionKey);
+    if (!run.sessionKey.startsWith("mission:") && errorSession.startsWith("mission:")) {
+      shiftMcSession(run.group);
+    }
+
     void postEvent({
       runId: run.runId,
       action: "error",
-      sessionKey: run.sessionKey,
+      sessionKey: errorSession,
       agentId: getGroupName(run.group),
       timestamp: new Date().toISOString(),
       error: `Exit code ${code}${stderr ? `: ${stderr.slice(0, 200)}` : ""}`,
       eventType: "lifecycle:error",
     });
 
-    console.log(`[watcher] ERROR ${containerName} code=${code}`);
+    console.log(`[watcher] ERROR ${containerName} code=${code} session=${errorSession}`);
     activeRuns.delete(containerName);
     return;
   }
@@ -783,17 +791,24 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
       return;
     }
 
+    const timeoutSession = run.sessionKey.startsWith("mission:")
+      ? run.sessionKey
+      : (peekMcSession(run.group) ?? run.sessionKey);
+    if (!run.sessionKey.startsWith("mission:") && timeoutSession.startsWith("mission:")) {
+      shiftMcSession(run.group);
+    }
+
     void postEvent({
       runId: run.runId,
       action: "error",
-      sessionKey: run.sessionKey,
+      sessionKey: timeoutSession,
       agentId: getGroupName(run.group),
       timestamp: new Date().toISOString(),
       error: "Container timed out",
       eventType: "lifecycle:timeout",
     });
 
-    console.log(`[watcher] TIMEOUT ${containerName}`);
+    console.log(`[watcher] TIMEOUT ${containerName} session=${timeoutSession}`);
     activeRuns.delete(containerName);
     return;
   }
