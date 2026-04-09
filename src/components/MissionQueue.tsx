@@ -151,7 +151,7 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 		);
 	}
 
-	const currentUserAgent = agents.find((a) => a.name === "BastionClaw");
+	const systemAgent = agents.find((a) => a.role === "AI Assistant") ?? agents[0] ?? null;
 
 	const getAgentName = (id: string) => {
 		return agents.find((a) => a.id === id)?.name || "Unknown";
@@ -166,7 +166,7 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 		const { active, over } = event;
 		setActiveTask(null);
 
-		if (!over || !currentUserAgent) return;
+		if (!over || !systemAgent) return;
 
 		const taskId = active.id as string;
 		const newStatus = over.id as TaskStatus;
@@ -181,7 +181,7 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 			// Log activity
 			await supabase.from("mc_activities").insert({
 				type: "status",
-				agent_id: currentUserAgent.id,
+				agent_id: systemAgent.id,
 				message: `moved task to ${newStatus}`,
 				target_id: taskId,
 			});
@@ -195,14 +195,14 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 	};
 
 	const handleArchive = async (taskId: string) => {
-		if (!currentUserAgent) return;
+		if (!systemAgent) return;
 		await supabase
 			.from("mc_tasks")
 			.update({ status: "archived", updated_at: new Date().toISOString() })
 			.eq("id", taskId);
 		await supabase.from("mc_activities").insert({
 			type: "status",
-			agent_id: currentUserAgent.id,
+			agent_id: systemAgent.id,
 			message: "archived task",
 			target_id: taskId,
 		});
@@ -281,7 +281,7 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 	};
 
 	const handlePlay = async (taskId: string) => {
-		if (!currentUserAgent) return;
+		if (!systemAgent) return;
 
 		await supabase
 			.from("mc_tasks")
@@ -290,7 +290,7 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 
 		await supabase.from("mc_activities").insert({
 			type: "status",
-			agent_id: currentUserAgent.id,
+			agent_id: systemAgent.id,
 			message: "moved task to in_progress",
 			target_id: taskId,
 		});
@@ -399,7 +399,7 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 										getAgentName={getAgentName}
 										formatRelativeTime={formatRelativeTime}
 										columnId={col.id}
-										currentUserAgentId={currentUserAgent?.id}
+	
 										onArchive={handleArchive}
 										onPlay={handlePlay}
 										onTogglePin={handleTogglePin}

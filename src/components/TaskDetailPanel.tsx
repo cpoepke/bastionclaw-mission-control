@@ -151,7 +151,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 	}, [taskId]);
 
 	const task = tasks.find((t) => t.id === taskId);
-	const currentUserAgent = agents.find((a) => a.name === "BastionClaw");
+	const systemAgent = agents.find((a) => a.role === "AI Assistant") ?? agents[0] ?? null;
 
 	useEffect(() => {
 		if (task) setDescription(task.description);
@@ -170,7 +170,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 	if (!task) return null;
 
 	const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-		if (!currentUserAgent) return;
+		if (!systemAgent) return;
 		const newStatus = e.target.value as Task["status"];
 		await supabase
 			.from("mc_tasks")
@@ -178,14 +178,14 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 			.eq("id", task.id);
 		await supabase.from("mc_activities").insert({
 			type: "status",
-			agent_id: currentUserAgent.id,
+			agent_id: systemAgent.id,
 			message: `changed status to ${newStatus}`,
 			target_id: task.id,
 		});
 	};
 
 	const handleAssigneeToggle = async (agentId: string) => {
-		if (!currentUserAgent) return;
+		if (!systemAgent) return;
 		const currentAssignees = task.assignee_ids || [];
 		const isAssigned = currentAssignees.includes(agentId);
 		const newAssignees = isAssigned
@@ -198,14 +198,14 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 	};
 
 	const saveDescription = async () => {
-		if (!currentUserAgent) return;
+		if (!systemAgent) return;
 		await supabase
 			.from("mc_tasks")
 			.update({ description, updated_at: new Date().toISOString() })
 			.eq("id", task.id);
 		await supabase.from("mc_activities").insert({
 			type: "update",
-			agent_id: currentUserAgent.id,
+			agent_id: systemAgent.id,
 			message: "updated task description",
 			target_id: task.id,
 		});
@@ -219,18 +219,18 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 	};
 
 	const sendComment = async () => {
-		if (!currentUserAgent) return;
+		if (!systemAgent) return;
 		const trimmed = commentText.trim();
 		if (!trimmed) return;
 		await supabase.from("mc_messages").insert({
 			task_id: task.id,
-			from_agent_id: currentUserAgent.id,
+			from_agent_id: systemAgent.id,
 			content: trimmed,
 			attachments: selectedAttachmentIds,
 		});
 		await supabase.from("mc_activities").insert({
 			type: "comments",
-			agent_id: currentUserAgent.id,
+			agent_id: systemAgent.id,
 			message: "added a comment",
 			target_id: task.id,
 		});
@@ -253,13 +253,13 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 	};
 
 	const handleResume = async () => {
-		if (!currentUserAgent || !task) return;
+		if (!systemAgent || !task) return;
 
 		const trimmed = commentText.trim();
 		if (trimmed) {
 			await supabase.from("mc_messages").insert({
 				task_id: task.id,
-				from_agent_id: currentUserAgent.id,
+				from_agent_id: systemAgent.id,
 				content: trimmed,
 				attachments: selectedAttachmentIds,
 			});
@@ -274,7 +274,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 
 		await supabase.from("mc_activities").insert({
 			type: "status",
-			agent_id: currentUserAgent.id,
+			agent_id: systemAgent.id,
 			message: "resumed task",
 			target_id: task.id,
 		});
@@ -290,11 +290,11 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 			allMessages.push({
 				id: "",
 				task_id: task.id,
-				from_agent_id: currentUserAgent.id,
+				from_agent_id: systemAgent.id,
 				content: trimmed,
 				attachments: [],
 				created_at: new Date().toISOString(),
-				agent_name: currentUserAgent.name,
+				agent_name: systemAgent.name,
 			});
 		}
 
@@ -335,7 +335,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 	};
 
 	const submitNewDoc = async () => {
-		if (!currentUserAgent) return;
+		if (!systemAgent) return;
 		const trimmedTitle = newDocTitle.trim();
 		if (!trimmedTitle) return;
 		const { data: newDoc } = await supabase
@@ -346,7 +346,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 				content: newDocContent.trim(),
 				path: newDocPath.trim() || null,
 				task_id: task.id,
-				created_by_agent_id: currentUserAgent.id,
+				created_by_agent_id: systemAgent.id,
 			})
 			.select()
 			.single();
@@ -428,23 +428,20 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 						{task.status !== "done" && task.status !== "archived" && (
 							<button
 								onClick={() =>
-									currentUserAgent &&
 									supabase
 										.from("mc_tasks")
 										.update({ status: "done", updated_at: new Date().toISOString() })
 										.eq("id", task.id)
 										.then(() =>
-											supabase.from("mc_activities").insert({
+											systemAgent && supabase.from("mc_activities").insert({
 												type: "status",
-												agent_id: currentUserAgent.id,
+												agent_id: systemAgent.id,
 												message: "marked task as done",
 												target_id: task.id,
 											}),
 										)
 								}
-								disabled={!currentUserAgent}
-								className={`flex-1 py-1.5 bg-[var(--accent-green)] text-white rounded text-xs font-medium flex items-center justify-center gap-2 transition-opacity shadow-sm ${!currentUserAgent ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}`}
-								title={!currentUserAgent ? "User agent not found" : "Mark as Done"}
+								className="flex-1 py-1.5 bg-[var(--accent-green)] text-white rounded text-xs font-medium flex items-center justify-center gap-2 transition-opacity shadow-sm hover:opacity-90"
 							>
 								<IconCheck size={16} />
 								Mark as Done
@@ -453,15 +450,12 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 						{task.status !== "archived" && (
 							<button
 								onClick={() =>
-									currentUserAgent &&
 									supabase
 										.from("mc_tasks")
 										.update({ status: "archived", updated_at: new Date().toISOString() })
 										.eq("id", task.id)
 								}
-								disabled={!currentUserAgent}
-								className={`${task.status === "done" ? "flex-1" : ""} py-1.5 px-3 bg-muted text-muted-foreground rounded text-xs font-medium flex items-center justify-center gap-2 transition-colors shadow-sm ${!currentUserAgent ? "opacity-50 cursor-not-allowed" : "hover:bg-[#e5e5e5]"}`}
-								title={!currentUserAgent ? "User agent not found" : "Archive Task"}
+								className={`${task.status === "done" ? "flex-1" : ""} py-1.5 px-3 bg-muted text-muted-foreground rounded text-xs font-medium flex items-center justify-center gap-2 transition-colors shadow-sm hover:bg-[#e5e5e5]`}
 							>
 								<IconArchive size={16} />
 								Archive
@@ -478,8 +472,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 					<select
 						value={task.status}
 						onChange={handleStatusChange}
-						disabled={!currentUserAgent}
-						className="w-full p-1.5 text-sm border border-border rounded bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-[var(--accent-blue)] disabled:opacity-50"
+						className="w-full p-1.5 text-sm border border-border rounded bg-secondary text-foreground focus:outline-none focus:ring-1 focus:ring-[var(--accent-blue)]"
 					>
 						{Object.entries(statusLabels).map(([key, label]) => (
 							<option key={key} value={key}>
@@ -495,7 +488,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 						<label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
 							Description
 						</label>
-						{!isEditingDesc && currentUserAgent && (
+						{!isEditingDesc && (
 							<button
 								onClick={() => setIsEditingDesc(true)}
 								className="text-[10px] text-[var(--accent-blue)] opacity-0 group-hover:opacity-100 transition-opacity"
@@ -555,8 +548,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 									</span>
 									<button
 										onClick={() => handleAssigneeToggle(id)}
-										disabled={!currentUserAgent}
-										className="hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+										className="hover:text-red-500"
 									>
 										<IconX size={12} />
 									</button>
@@ -565,8 +557,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 						})}
 						<div className="relative group">
 							<button
-								disabled={!currentUserAgent}
-								className="flex items-center gap-1 px-2 py-1 bg-muted border border-transparent rounded-full text-[11px] text-muted-foreground hover:bg-white hover:border-border transition-all disabled:opacity-50"
+								className="flex items-center gap-1 px-2 py-1 bg-muted border border-transparent rounded-full text-[11px] text-muted-foreground hover:bg-white hover:border-border transition-all"
 							>
 								<span>+ Add</span>
 							</button>
@@ -642,8 +633,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 						</label>
 						<button
 							onClick={() => setIsAddingDoc((prev) => !prev)}
-							disabled={!currentUserAgent}
-							className="text-[10px] text-[var(--accent-blue)] disabled:opacity-50"
+							className="text-[10px] text-[var(--accent-blue)]"
 						>
 							{isAddingDoc ? "Close Resource" : "Add Resource"}
 						</button>
@@ -718,12 +708,11 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 									<button
 										key={doc.id}
 										onClick={() => toggleAttachment(doc.id)}
-										disabled={!currentUserAgent}
 										className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
 											isSelected
 												? "bg-[var(--accent-blue)] text-white border-[var(--accent-blue)]"
 												: "bg-white text-muted-foreground border-border hover:bg-muted"
-										} disabled:opacity-50`}
+										}`}
 									>
 										{doc.title}
 									</button>
@@ -799,7 +788,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 									</button>
 									<button
 										onClick={submitNewDoc}
-										disabled={!currentUserAgent || !newDocTitle.trim()}
+										disabled={!newDocTitle.trim()}
 										className="px-3 py-1 text-[10px] bg-foreground text-secondary rounded hover:opacity-90 disabled:opacity-50"
 									>
 										Add Resource
@@ -813,18 +802,13 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 						<textarea
 							value={commentText}
 							onChange={(e) => setCommentText(e.target.value)}
-							placeholder={
-								currentUserAgent
-									? "Write a comment..."
-									: "Sign in as an agent to comment"
-							}
-							disabled={!currentUserAgent}
-							className="w-full min-h-[80px] p-2.5 text-sm border border-border rounded bg-white text-foreground focus:outline-none focus:ring-1 focus:ring-[var(--accent-blue)] disabled:opacity-50"
+							placeholder="Write a comment..."
+							className="w-full min-h-[80px] p-2.5 text-sm border border-border rounded bg-white text-foreground focus:outline-none focus:ring-1 focus:ring-[var(--accent-blue)]"
 						/>
 						<div className="flex justify-end gap-2">
 							<button
 								onClick={sendComment}
-								disabled={!currentUserAgent || commentText.trim().length === 0}
+								disabled={commentText.trim().length === 0}
 								className="px-4 py-2 text-xs bg-[var(--accent-blue)] text-white rounded font-semibold hover:opacity-90 disabled:opacity-50"
 							>
 								Send Comment
@@ -832,8 +816,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 							{task.status === "review" && (
 								<button
 									onClick={handleResume}
-									disabled={!currentUserAgent}
-									className="px-4 py-2 text-xs bg-[var(--accent-green)] text-white rounded font-semibold hover:opacity-90 disabled:opacity-50 flex items-center gap-1.5"
+									className="px-4 py-2 text-xs bg-[var(--accent-green)] text-white rounded font-semibold hover:opacity-90 flex items-center gap-1.5"
 								>
 									<IconPlayerPlay size={14} />
 									Resume

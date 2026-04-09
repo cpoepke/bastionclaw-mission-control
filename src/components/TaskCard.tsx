@@ -17,7 +17,6 @@ interface TaskCardProps {
 	getAgentName: (id: string) => string;
 	formatRelativeTime: (timestamp: number | null) => string;
 	columnId: string;
-	currentUserAgentId?: string;
 	onArchive?: (taskId: string) => void;
 	onPlay?: (taskId: string) => void;
 	onTogglePin?: (taskId: string) => void;
@@ -31,7 +30,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
 	getAgentName,
 	formatRelativeTime,
 	columnId,
-	currentUserAgentId,
 	onArchive,
 	onPlay,
 	onTogglePin,
@@ -78,7 +76,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
 				<span className="text-base">↑</span>
 				<div className="flex items-center gap-2">
 					{(columnId === "inbox" || columnId === "assigned") &&
-						currentUserAgentId &&
 						onPlay && (
 							<button
 								onClick={(e) => {
@@ -116,7 +113,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 							)}
 						</button>
 					)}
-					{columnId === "done" && currentUserAgentId && onArchive && (
+					{columnId === "done" && onArchive && (
 						<button
 							onClick={(e) => {
 								e.stopPropagation();
