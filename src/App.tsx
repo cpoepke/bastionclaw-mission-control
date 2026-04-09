@@ -42,7 +42,7 @@ export default function App() {
 	const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 	const [showAddAgentModal, setShowAddAgentModal] = useState(false);
 
-	const triggerAgent = useCallback(async (taskId: string, message: string) => {
+	const triggerAgent = useCallback(async (taskId: string, message: string, group?: string) => {
 		try {
 			const res = await fetch("/hooks/agent", {
 				method: "POST",
@@ -50,6 +50,7 @@ export default function App() {
 				body: JSON.stringify({
 					message,
 					sessionKey: `mission:${taskId}`,
+					group,
 				}),
 			});
 

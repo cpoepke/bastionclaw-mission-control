@@ -1289,10 +1289,11 @@ function watchMcMappings(): void {
           const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
           if (data.sessionKey && typeof data.sessionKey === "string") {
             const sessionKey = data.sessionKey as string;
-            pushMcSession("main", sessionKey);
+            const group = (typeof data.group === "string" && data.group) || "main";
+            pushMcSession(group, sessionKey);
 
             // Take file snapshot BEFORE agent processes the message
-            mcFileSnapshots.set(sessionKey, snapshotGroupDir("main"));
+            mcFileSnapshots.set(sessionKey, snapshotGroupDir(group));
 
             // Post start time as first comment on the task
             const startTime = Date.now();
@@ -1301,18 +1302,18 @@ function watchMcMappings(): void {
               minute: "2-digit",
               hour12: true,
             });
-            const containerName = lastContainerByGroup.get("main");
+            const containerName = lastContainerByGroup.get(group);
             void postEvent({
               runId: containerName ?? `mc-${Date.now()}`,
               action: "progress",
               sessionKey,
-              agentId: getGroupName("main"),
+              agentId: getGroupName(group),
               timestamp: new Date().toISOString(),
               message: `Task started at ${timeStr}`,
               eventType: "task:start",
             });
 
-            console.log(`[watcher] MC_MAPPING ${file} session=${sessionKey}`);
+            console.log(`[watcher] MC_MAPPING ${file} session=${sessionKey} group=${group}`);
           }
 
           // Clean up processed mapping file

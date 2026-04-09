@@ -24,7 +24,7 @@ const COLOR_SWATCHES = [
 type AddTaskModalProps = {
 	onClose: () => void;
 	onCreated: (taskId: string) => void;
-	onTriggerAgent?: (taskId: string, message: string) => Promise<void>;
+	onTriggerAgent?: (taskId: string, message: string, group?: string) => Promise<void>;
 	initialAssigneeId?: string;
 };
 
@@ -126,7 +126,7 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 					}
 
 					prompt += description.trim() || title.trim();
-					await onTriggerAgent(taskId, prompt);
+					await onTriggerAgent(taskId, prompt, agent?.session_key ?? undefined);
 				}
 
 				onCreated(taskId);

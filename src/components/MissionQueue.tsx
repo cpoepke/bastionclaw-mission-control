@@ -188,7 +188,8 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 
 			if (newStatus === "in_progress" && task.status !== "in_progress") {
 				const message = await buildPrompt(task);
-				await triggerAgent(taskId, message);
+				const assignee = task.assignee_ids.length > 0 ? agents.find((a) => a.id === task.assignee_ids[0]) : null;
+				await triggerAgent(taskId, message, assignee?.session_key ?? undefined);
 			}
 		}
 	};
@@ -255,7 +256,7 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 		return prompt;
 	};
 
-	const triggerAgent = async (taskId: string, message: string) => {
+	const triggerAgent = async (taskId: string, message: string, group?: string) => {
 		try {
 			const res = await fetch("/hooks/agent", {
 				method: "POST",
@@ -263,6 +264,7 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 				body: JSON.stringify({
 					message,
 					sessionKey: `mission:${taskId}`,
+					group,
 				}),
 			});
 
@@ -297,7 +299,8 @@ const MissionQueue: React.FC<MissionQueueProps> = ({
 		if (!task) return;
 
 		const message = await buildPrompt(task);
-		await triggerAgent(taskId, message);
+		const assignee = task.assignee_ids.length > 0 ? agents.find((a) => a.id === task.assignee_ids[0]) : null;
+		await triggerAgent(taskId, message, assignee?.session_key ?? undefined);
 	};
 
 	const displayColumns = showArchived ? [...columns, archivedColumn] : columns;

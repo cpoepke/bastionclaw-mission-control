@@ -305,12 +305,16 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 		}
 
 		try {
+			const assignee = task.assignee_ids.length > 0
+				? agents.find((a) => a.id === task.assignee_ids[0])
+				: null;
 			const res = await fetch("/hooks/agent", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					message: prompt,
 					sessionKey: `mission:${task.id}`,
+					group: assignee?.session_key ?? undefined,
 				}),
 			});
 			if (!res.ok) {
