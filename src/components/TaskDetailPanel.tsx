@@ -157,6 +157,15 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 		if (task) setDescription(task.description);
 	}, [task]);
 
+	// These must be before any conditional returns to satisfy Rules of Hooks
+	const docsById = useMemo(() => {
+		const map = new Map<string, Document>();
+		resources.forEach((doc) => map.set(doc.id, doc));
+		return map;
+	}, [resources]);
+
+	const sortedMessages = useMemo(() => [...messages], [messages]);
+
 	if (!taskId) return null;
 	if (!task) return null;
 
@@ -202,14 +211,6 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
 		});
 		setIsEditingDesc(false);
 	};
-
-	const docsById = useMemo(() => {
-		const map = new Map<string, Document>();
-		resources.forEach((doc) => map.set(doc.id, doc));
-		return map;
-	}, [resources]);
-
-	const sortedMessages = useMemo(() => [...messages], [messages]);
 
 	const toggleAttachment = (docId: string) => {
 		setSelectedAttachmentIds((prev) =>
