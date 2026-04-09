@@ -113,16 +113,14 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({
 
 				if (status === "in_progress" && onTriggerAgent) {
 					let prompt = "";
+					const agent = assigneeId ? agents.find((a) => a.id === assigneeId) : undefined;
 
-					if (assigneeId) {
-						const agent = agents.find((a) => a.id === assigneeId);
-						if (agent) {
-							const parts: string[] = [];
-							if (agent.system_prompt) parts.push(`System Prompt:\n${agent.system_prompt}`);
-							if (agent.character) parts.push(`Character:\n${agent.character}`);
-							if (agent.lore) parts.push(`Lore:\n${agent.lore}`);
-							if (parts.length > 0) prompt = parts.join("\n\n") + "\n\n---\n\n";
-						}
+					if (agent) {
+						const parts: string[] = [];
+						if (agent.system_prompt) parts.push(`System Prompt:\n${agent.system_prompt}`);
+						if (agent.character) parts.push(`Character:\n${agent.character}`);
+						if (agent.lore) parts.push(`Lore:\n${agent.lore}`);
+						if (parts.length > 0) prompt = parts.join("\n\n") + "\n\n---\n\n";
 					}
 
 					prompt += description.trim() || title.trim();
