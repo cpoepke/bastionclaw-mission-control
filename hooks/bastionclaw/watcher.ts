@@ -535,7 +535,7 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
     return;
   }
 
-  // --- Piped messages to active container → create task for non-MC piped messages ---
+  // --- Piped messages to active container → link to MC session or create standalone task ---
   if (message === "Piped messages to active container") {
     const chatJid = kv["chatJid"];
     const prompt = kv["prompt"];
@@ -544,6 +544,28 @@ function handleLogBlock(mainLine: string, kvLines: string[]): void {
     const source = detectSource(chatJid);
     if (!source || source === "mission-control") return;
 
+    // Check if this piped message is actually an MC task being delivered to an
+    // idle-but-running container. When Play is clicked while the container is alive,
+    // the MC mapping is written first, then the task prompt is piped via IPC.
+    // Link the active run to the MC session instead of creating a duplicate task.
+    for (const [group, containerName] of lastContainerByGroup) {
+      const mcSession = peekMcSession(group);
+      if (mcSession) {
+        const run = activeRuns.get(containerName);
+        if (run) {
+          run.sessionKey = mcSession;
+          run.source = "mission-control";
+          run.completedEarly = false;
+          run.prompt = prompt ?? run.prompt;
+          shiftMcSession(group);
+          mcFileSnapshots.set(mcSession, snapshotGroupDir(group));
+          console.log(`[watcher] PIPED_MC ${containerName} session=${mcSession} (linked piped message to MC task)`);
+          return;
+        }
+      }
+    }
+
+    // Non-MC piped message — create a standalone task
     const pipedRunId = `piped-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
     void postEvent({
